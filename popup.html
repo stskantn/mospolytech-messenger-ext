@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mospolytech Messenger</title>
+  <link rel="stylesheet" href="popup.css" />
+  <!-- Библиотека для чтения Excel файлов -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <div class="header">
+    <img class="logo" src="logo.png" alt="Logo">
+    <button class="info-btn" data-hint="main-hint">
+      <img src="info-icon.svg" alt="Info">
+    </button>
+  </div>
+
+  <div class="hint" id="main-hint">
+    <h2>Инструкция</h2>
+    1. Откройте <a href="https://e.mospolytech.ru" target="_blank">ЛК студента и сотрудника</a> в новой вкладке и войдите по логину и паролю<br/>
+    2. Потом откройте это расширение и нажмите «Проверить сессию»<br/>
+    3. Если статус проверки «ОК», создайте и отправьте рассылку
+  </div>
+
+  <div class="row">
+    <button id="btnCheck">
+      <img src="window-check-icon.svg" alt="Check" width="15px" height="15px" class="btnIcon">
+      <div>Проверить сессию</div>
+    </button>
+    <span id="sessionState" class="pill">не проверено</span>
+  </div>
+
+  <div class="box">
+    <div class="box-header">
+      <img src="table-add-icon.svg" alt="Table" width="18px" height="18px">
+      <h2 class="header-text">Импорт получателей</h2>
+      <button class="info-btn" data-hint="csv-hint">
+        <img src="info-icon.svg" alt="Info">
+      </button>
+    </div>
+    
+    <div class="hint hidden" id="csv-hint">
+      <h2>Поддерживаемые форматы</h2>
+      <strong>Excel (XLSX):</strong> Сохраните файл как .xlsx<br/>
+      <strong>Текст (TXT):</strong> В Excel выберите «Сохранить как» → «Текст Юникод (*.txt)»<br/>
+      <strong>CSV:</strong> В Excel выберите «Сохранить как» → «CSV UTF-8 (разделитель — запятая)»<br/>
+      <br/>
+      <strong>Формат данных:</strong><br/>
+      Столбцы должны называться: <strong>ФИО</strong> | <strong>Группа</strong><br/>
+      Или быть в таком порядке без заголовков
+    </div>
+    
+    <input type="file" id="csvFile" accept=".csv,.txt,.xlsx,.xls,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="uplBtn"/>
+    <div class="row">
+      <button id="btnParse" disabled>
+        <img src="share-ios-export-icon.svg" alt="Upload" width="15px" height="15px" class="btnIcon">
+        <div>Загрузить список</div>
+      </button>
+      <button id="btnExport" disabled>
+        <img src="download-icon.svg" alt="Download" width="15px" height="15px" class="btnIcon">
+        <div>Выгрузить ID студентов</div>
+      </button>
+    </div>
+    <div class="row">
+      <span id="countInfo"></span>
+    </div>
+  </div>
+
+  <div class="box">
+    <div class="box-header">
+      <img src="chat-dots-icon.svg" alt="Chats" width="18px" height="18px">
+      <h2 class="header-text">Сообщение</h2>
+      <button class="info-btn" data-hint="format-hint">
+        <img src="info-icon.svg" alt="Info">
+      </button>
+    </div>
+    
+    <div class="hint hidden" id="format-hint">
+      <h2>Форматирование текста</h2>
+      Выделите текст и нажмите на кнопку форматирования.<br/>
+      Нажмите «Enter» для создания нового абзаца.
+    </div>
+    
+    <div class="format-toolbar">
+      <button type="button" class="format-btn" data-format="bold" title="Жирный (Ctrl+B)">
+        <img src="bold-icon.svg" alt="Bold" width="20px" height="20px">
+      </button>
+      <button type="button" class="format-btn" data-format="italic" title="Курсив (Ctrl+I)">
+        <img src="italic-icon.svg" alt="Italic" width="20px" height="20px">
+      </button>
+      <button type="button" class="format-btn" data-format="strikethrough" title="Зачеркнутый">
+        <img src="strikethrough-icon.svg" alt="Strikethrough" width="20px" height="20px">
+      </button>
+    </div>
+    
+    <div id="message" class="message-editor" contenteditable="true" data-placeholder="Текст сообщения..."></div>
+  </div>
+
+  <div class="box">
+    <div class="box-header">
+      <img src="more-grid-small.svg" alt="Actions" width="18px" height="18px">
+      <h2 class="header-text">Действия</h2>
+      <div class="empty-div"></div>
+    </div>
+    <div class="row">
+      <button id="btnResolve" disabled>
+        <img src="search-magnifying-glass-icon.svg" alt="Search" width="15px" height="15px" class="btnIcon">
+        <div>Найти получателей</div>
+      </button>
+      <button id="btnSend" disabled>
+        <img src="paper-plane-icon.svg" alt="Send" width="15px" height="15px" class="btnIcon">
+        <div>Отправить рассылку</div>
+      </button>
+    </div>
+    <div class="row">
+      <progress id="progress" value="0" max="100"></progress>
+      <span id="progressText"></span>
+    </div>
+  </div>
+
+  <div class="box logger">
+    <div class="box-header">
+      <img src="terminal-icon.svg" alt="Terminal" width="18px" height="18px">
+      <h2 class="header-text">Лог</h2>
+      <div class="empty-div"></div>
+    </div>
+    <pre id="log"></pre>
+  </div>
+
+  <div class="verInfo">
+    Версия: 1.0.18<br/>
+    Made by stskantn for International Department of Moscow Polytech
+  </div>
+
+    <!-- Overlay: Spinner (для "Проверить сессию" и "Загрузить список") -->
+  <div id="overlaySpinner" class="overlay hidden" aria-hidden="true">
+    <div class="overlay-card">
+      <img class="overlay-spinner" src="loader.gif" alt="Loading" />
+      <div id="overlaySpinnerText" class="overlay-text">Загрузка…</div>
+    </div>
+  </div>
+
+  <!-- Overlay: Progress (для "Найти получателей" и "Отправить рассылку") -->
+  <div id="overlayProgress" class="overlay hidden" aria-hidden="true">
+    <div class="overlay-card overlay-card-wide">
+      <div id="overlayProgressTitle" class="overlay-title">Выполняю…</div>
+
+      <progress id="overlayProgressBar" value="0" max="100"></progress>
+
+      <div class="overlay-row">
+        <span id="overlayProgressCount" class="overlay-muted">0/0</span>
+        <span id="overlayProgressExtra" class="overlay-muted"></span>
+      </div>
+
+      <div id="overlayProgressSub" class="overlay-text overlay-subtext"></div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
